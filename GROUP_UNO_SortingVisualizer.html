@@ -228,8 +228,8 @@ body::after {
     margin-left: 0;
   }
 
-  .topbar {
-    padding: 0 18px;
+  .topbar {    
+    padding: 0px;    
     gap: 10px;
   }
 
@@ -244,18 +244,18 @@ body::after {
   }
 
   .content {
-    padding: 20px;
+    padding: 0px;
   }
 
-  .stats-row,
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
   .home-grid,
   .two-col,
   .complexity-grid {
     grid-template-columns: 1fr;
-  }
-
-  .stats-row {
-    gap: 16px;
   }
 
   .home-card,
@@ -391,7 +391,7 @@ body::after {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r); padding: 24px;
+  border-radius: var(--r); padding: 10px;
   margin-bottom: 16px; transition: border-color 0.2s;
 }
 .card:hover { border-color: var(--border2); }
