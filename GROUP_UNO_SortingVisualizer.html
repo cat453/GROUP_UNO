@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GROUP UNO — Sorting Algorithm Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════════════════
+   ROOT VARIABLES & RESET
+═══════════════════════════════════════════════════════ */
+:root {
+  --bg:        #06080f;
+  --surface:   #0d1120;
+  --surface2:  #111828;
+  --surface3:  #1a2235;
+  --surface4:  #212b42;
+  --accent:    #4f8ef7;
+  --accent2:   #00e5b0;
+  --accent3:   #ff5f7e;
+  --accent4:   #ffd166;
+  --text:      #edf0f8;
+  --text2:     #8a94b2;
+  --text3:     #4a5572;
+  --border:    #1e2840;
+  --border2:   #2c3a5c;
+  --mono:      'JetBrains Mono', monospace;
+  --sans:      'Syne', sans-serif;
+  --r:         14px;
+  --r-sm:      8px;
+  --glow-blue: 0 0 30px rgba(79,142,247,0.18);
+  --glow-teal: 0 0 30px rgba(0,229,176,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated grid bg */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(79,142,247,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,142,247,0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none; z-index: 0;
+  animation: gridShift 60s linear infinite;
+}
+@keyframes gridShift { from{background-position:0 0} to{background-position:48px 48px} }
+
+/* Radial ambient */
+body::after {
+  content: '';
+  position: fixed;
+  top: -200px; left: -200px;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(79,142,247,0.06) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+  animation: drift 20s ease-in-out infinite alternate;
+}
+@keyframes drift { from{transform:translate(0,0)} to{transform:translate(120px,80px)} }
+
+/* ═══════════════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════════════ */
+.app { position: relative; z-index: 1; display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 260px; min-height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; z-index: 20;
+  transition: transform 0.3s;
+}
+
+.logo {
+  padding: 28px 24px 22px;
+  border-bottom: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+.logo::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(79,142,247,0.06), transparent 60%);
+  pointer-events: none;
+}
+.logo-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(79,142,247,0.1);
+  border: 1px solid rgba(79,142,247,0.2);
+  border-radius: 20px; padding: 3px 10px;
+  font-family: var(--mono); font-size: 10px;
+  color: var(--accent); letter-spacing: 0.1em;
+  margin-bottom: 10px;
+}
+.logo-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+.logo-name {
+  font-family: var(--sans); font-size: 22px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.5px; line-height: 1;
+}
+.logo-name .highlight { color: var(--accent); }
+.logo-sub {
+  font-size: 11px; color: var(--text3); margin-top: 5px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  font-family: var(--mono);
+}
+
+.nav { padding: 20px 14px; flex: 1; }
+.nav-section-label {
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.14em;
+  padding: 0 10px; margin: 20px 0 8px;
+}
+.nav-section-label:first-child { margin-top: 0; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border-radius: var(--r-sm);
+  cursor: pointer; font-size: 14px; font-weight: 500;
+  color: var(--text2); transition: all 0.2s;
+  border: 1px solid transparent; width: 100%;
+  background: none; text-align: left; font-family: var(--sans);
+}
+.nav-item:hover { color: var(--text); background: var(--surface2); }
+.nav-item.active {
+  color: var(--accent);
+  background: rgba(79,142,247,0.08);
+  border-color: rgba(79,142,247,0.2);
+}
+.nav-item .ni-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; background: var(--surface2); flex-shrink: 0;
+  transition: background 0.2s;
+}
+.nav-item.active .ni-icon { background: rgba(79,142,247,0.15); }
+.nav-item .ni-label { flex: 1; }
+.nav-item .ni-count {
+  font-family: var(--mono); font-size: 11px;
+  background: var(--surface3); padding: 2px 7px;
+  border-radius: 10px; color: var(--text3);
+  transition: all 0.2s;
+}
+.nav-item.active .ni-count { background: rgba(79,142,247,0.15); color: var(--accent); }
+
+.sidebar-footer {
+  padding: 16px 20px; border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.sf-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.sf-label { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.sf-val { font-family: var(--mono); font-size: 13px; color: var(--accent2); font-weight: 700; }
+.sf-lang {
+  margin-top: 10px; padding: 8px 10px;
+  background: var(--surface2); border-radius: var(--r-sm);
+  display: flex; gap: 6px; align-items: center;
+}
+.sf-lang-dot { width: 8px; height: 8px; border-radius: 50%; }
+.sf-lang span { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 18;
+}
+
+/* ── MAIN CONTENT ── */
+.main { margin-left: 260px; flex: 1; padding: 0; min-height: 100vh; }
+
+.menu-btn {
+  display: none;
+  border: none;
+  background: rgba(79,142,247,0.12);
+  color: var(--text);
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.back-btn {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    position: fixed;
+    transform: translateX(-100%);
+    width: min(88vw, 320px);
+    max-width: 320px;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    transition: transform 0.3s ease;
+  }
+
+  body.sidebar-open {
+    overflow: hidden;
+  }
+
+  body.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  body.sidebar-open .sidebar-overlay {
+    display: block;
+    pointer-events: auto;
+    opacity: 1;
+  }
+
+  .main {
+    margin-left: 0;
+  }
+
+  .topbar {
+    padding: 0 18px;
+    gap: 10px;
+  }
+
+  .tb-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tb-right {
+    gap: 8px;
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  .stats-row,
+  .home-grid,
+  .two-col,
+  .complexity-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-row {
+    gap: 16px;
+  }
+
+  .home-card,
+  .card,
+  .algo-explanation,
+  .archive-card,
+  .viz-record,
+  .ds-item {
+    width: 100%;
+  }
+
+  .sec-header {
+    margin-bottom: 24px;
+  }
+
+  .sec-title {
+    font-size: 24px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  .form-input,
+  .order-toggle,
+  .btn-row,
+  .step-nav,
+  .autoplay-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .order-toggle,
+  .btn-row,
+  .step-nav,
+  .autoplay-bar {
+    gap: 10px;
+  }
+
+  .menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body.show-back .back-btn {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    padding: 0 14px;
+  }
+
+  .sidebar {
+    width: 100%;
+  }
+
+  .sec-title {
+    font-size: 22px;
+  }
+
+  .tb-crumb {
+    font-size: 11px;
+  }
+
+  .lang-tag,
+  .status-badge {
+    display: none;
+  }
+}
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(6,8,15,0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 36px; height: 58px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.tb-left { display: flex; align-items: center; gap: 12px; }
+.tb-crumb {
+  font-family: var(--mono); font-size: 12px; color: var(--text3);
+}
+.tb-crumb span { color: var(--text); }
+.tb-sep { color: var(--text3); }
+
+.tb-right { display: flex; align-items: center; gap: 10px; }
+.status-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--accent2);
+  background: rgba(0,229,176,0.07);
+  border: 1px solid rgba(0,229,176,0.18);
+  padding: 5px 12px; border-radius: 20px;
+  font-family: var(--mono);
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent2); animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.lang-tag {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--text3);
+  background: var(--surface2); border: 1px solid var(--border2);
+  padding: 4px 10px; border-radius: 20px; font-family: var(--mono);
+}
+
+/* ── CONTENT AREA ── */
+.content { padding: 36px; }
+
+/* ── PAGE TRANSITIONS ── */
+.page { display: none; }
+.page.active { display: block; animation: pageIn 0.25s ease; }
+@keyframes pageIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── SECTION HEADER ── */
+.sec-header { margin-bottom: 32px; }
+.sec-eyebrow {
+  font-family: var(--mono); font-size: 11px; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sec-eyebrow::before { content: '//'; color: var(--text3); }
+.sec-title { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; line-height: 1.1; }
+.sec-title .hl { color: var(--accent); }
+.sec-sub { font-size: 14px; color: var(--text2); margin-top: 8px; line-height: 1.6; }
+
+/* ═══════════════════════════════════════════════════════
+   CARDS & SURFACES
+═══════════════════════════════════════════════════════ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r); padding: 24px;
+  margin-bottom: 16px; transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--border2); }
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em;
+}
+
+/* ═══════════════════════════════════════════════════════
+   HOME PAGE
+═══════════════════════════════════════════════════════ */
+.stats-row {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 14px;
+  margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px 22px;
+  position: relative; overflow: hidden; transition: all 0.2s;
+}
+.stat-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.stat-card:nth-child(1)::before { background: var(--accent); }
+.stat-card:nth-child(2)::before { background: var(--accent2); }
+.stat-card:nth-child(3)::before { background: var(--accent3); }
+.stat-card:nth-child(4)::before { background: var(--accent4); }
+.stat-icon { font-size: 22px; margin-bottom: 10px; }
+.stat-label { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+.stat-value { font-family: var(--mono); font-size: 30px; font-weight: 800; color: var(--text); line-height: 1; }
+.stat-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+.home-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin-bottom: 28px; }
+.home-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 26px; cursor: pointer;
+  transition: all 0.25s; position: relative; overflow: hidden;
+}
+.home-card::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 80% 20%, rgba(79,142,247,0.06), transparent 60%);
+  pointer-events: none;
+}
+.home-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--glow-blue); }
+.hc-num {
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.hc-num::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.hc-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 14px;
+}
+.hc-icon.c1 { background: rgba(79,142,247,0.12); }
+.hc-icon.c2 { background: rgba(0,229,176,0.1); }
+.hc-icon.c3 { background: rgba(255,95,126,0.1); }
+.hc-icon.c4 { background: rgba(255,209,102,0.1); }
+.home-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.home-card p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+.hc-arrow {
+  position: absolute; top: 22px; right: 22px;
+  font-size: 18px; color: var(--text3); transition: all 0.2s;
+}
+.home-card:hover .hc-arrow { color: var(--accent); transform: translate(3px,-3px); }
+
+/* Algo chips */
+.algo-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.algo-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px; font-size: 13px;
+  transition: all 0.2s; cursor: default;
+}
+.algo-chip:hover { border-color: var(--border2); }
+.algo-chip .chip-dot { width: 7px; height: 7px; border-radius: 50%; }
+.algo-chip .chip-name { font-weight: 600; color: var(--text); }
+.algo-chip .chip-complexity { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+/* ═══════════════════════════════════════════════════════
+   FORMS
+═══════════════════════════════════════════════════════ */
+.form-label {
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em;
+  display: block; margin-bottom: 8px;
+}
+.form-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text); font-family: var(--mono);
+  font-size: 14px; padding: 11px 14px; margin-bottom: 18px;
+  outline: none; transition: all 0.2s; appearance: none;
+}
+.form-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79,142,247,0.12);
+}
+.form-input::placeholder { color: var(--text3); }
+select.form-input option { background: var(--surface2); }
+
+.order-toggle { display: flex; gap: 8px; margin-bottom: 18px; }
+.order-btn {
+  flex: 1; padding: 11px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text2); font-family: var(--sans); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.order-btn:hover { border-color: var(--border2); color: var(--text); }
+.order-btn.sel-asc { background: rgba(79,142,247,0.1); border-color: var(--accent); color: var(--accent); }
+.order-btn.sel-desc { background: rgba(255,95,126,0.1); border-color: var(--accent3); color: var(--accent3); }
+
+/* ═══════════════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 20px; border-radius: var(--r-sm);
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--text); font-family: var(--sans); font-size: 14px;
+  font-weight: 600; cursor: pointer; transition: all 0.18s;
+}
+.btn:hover { background: var(--surface2); }
+.btn-primary {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+.btn-primary:hover { background: #6ba3f8; box-shadow: var(--glow-blue); }
+.btn-teal { background: var(--accent2); border-color: var(--accent2); color: #06080f; }
+.btn-teal:hover { background: #1af5be; box-shadow: var(--glow-teal); }
+.btn-sm { padding: 7px 14px; font-size: 13px; }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ═══════════════════════════════════════════════════════
+   BADGES & TAGS
+═══════════════════════════════════════════════════════ */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  padding: 3px 9px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.badge-blue   { background: rgba(79,142,247,0.12);  color: #7eb3ff; border: 1px solid rgba(79,142,247,0.22); }
+.badge-teal   { background: rgba(0,229,176,0.1);    color: #00e5b0; border: 1px solid rgba(0,229,176,0.2); }
+.badge-red    { background: rgba(255,95,126,0.1);   color: #ff8fa3; border: 1px solid rgba(255,95,126,0.2); }
+.badge-yellow { background: rgba(255,209,102,0.1);  color: #ffd166; border: 1px solid rgba(255,209,102,0.2); }
+.badge-asc    { background: rgba(0,229,176,0.1);    color: #00e5b0; border: 1px solid rgba(0,229,176,0.2); }
+.badge-desc   { background: rgba(255,95,126,0.1);   color: #ff8fa3; border: 1px solid rgba(255,95,126,0.2); }
+
+/* ═══════════════════════════════════════════════════════
+   ARRAY DISPLAY
+═══════════════════════════════════════════════════════ */
+.arr-box {
+  font-family: var(--mono); font-size: 13px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 11px 14px;
+  color: var(--accent2); word-break: break-all; line-height: 1.7;
+  margin: 4px 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   DATASET LIST
+═══════════════════════════════════════════════════════ */
+.ds-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 12px 16px; margin-bottom: 8px;
+  transition: border-color 0.2s; cursor: default;
+}
+.ds-item:hover { border-color: var(--border2); }
+.ds-num { font-family: var(--mono); font-size: 11px; color: var(--text3); width: 26px; flex-shrink: 0; }
+.ds-vals { font-family: var(--mono); font-size: 13px; color: var(--accent2); flex: 1; }
+.ds-len { font-size: 11px; color: var(--text3); flex-shrink: 0; font-family: var(--mono); }
+.ds-del {
+  background: none; border: none; color: var(--text3); cursor: pointer;
+  font-size: 14px; padding: 2px 6px; border-radius: 4px; transition: color 0.2s;
+}
+.ds-del:hover { color: var(--accent3); }
+
+/* ═══════════════════════════════════════════════════════
+   BAR CHART VISUALIZER
+═══════════════════════════════════════════════════════ */
+#viz-bars {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 160px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 14px 14px 0;
+  margin: 16px 0;
+}
+.bar {
+  flex: 1; border-radius: 4px 4px 0 0;
+  transition: height 0.3s cubic-bezier(.4,0,.2,1), background 0.2s;
+  background: var(--accent); min-width: 5px; position: relative;
+}
+.bar.highlight { background: var(--accent2); }
+.bar:hover::after {
+  content: attr(title); position: absolute; bottom: calc(100% + 5px);
+  left: 50%; transform: translateX(-50%);
+  background: var(--surface3); color: var(--text);
+  font-family: var(--mono); font-size: 10px; padding: 3px 7px;
+  border-radius: 5px; white-space: nowrap; pointer-events: none;
+  border: 1px solid var(--border2);
+}
+
+.step-nav {
+  display: flex; align-items: center; gap: 10px; margin: 12px 0 10px;
+}
+.step-label {
+  flex: 1; text-align: center; font-family: var(--mono);
+  font-size: 12px; color: var(--text3);
+}
+.step-arr {
+  font-family: var(--mono); font-size: 13px;
+  background: rgba(79,142,247,0.06); border: 1px solid rgba(79,142,247,0.15);
+  border-radius: var(--r-sm); padding: 12px 16px; color: #7eb3ff;
+}
+
+/* Auto-play controls */
+.autoplay-bar {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 10px; padding: 10px 14px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.speed-label { font-family: var(--mono); font-size: 11px; color: var(--text3); white-space: nowrap; }
+.speed-slider {
+  flex: 1; -webkit-appearance: none; appearance: none;
+  height: 3px; border-radius: 2px; background: var(--border2); outline: none;
+}
+.speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ALGORITHM EXPLANATION
+═══════════════════════════════════════════════════════ */
+.algo-explanation {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 24px; margin-top: 0;
+  position: relative; overflow: hidden;
+}
+.algo-explanation::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+.ae-title {
+  font-size: 17px; font-weight: 700; margin-bottom: 3px;
+  display: flex; align-items: center; gap: 10px;
+}
+.ae-sub { font-size: 12px; color: var(--text3); font-family: var(--mono); margin-bottom: 18px; }
+
+.ae-section { margin-bottom: 16px; }
+.ae-section-label {
+  font-family: var(--mono); font-size: 10px; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 6px;
+}
+.ae-section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
+
+.complexity-grid {
+  display: grid; grid-template-columns: repeat(5,1fr);
+  gap: 6px; margin: 14px 0;
+}
+.cplx-cell {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 9px 6px; text-align: center;
+}
+.cplx-label { font-family: var(--mono); font-size: 9px; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+.cplx-val { font-family: var(--mono); font-size: 12px; color: var(--accent2); font-weight: 700; }
+
+.ae-tip {
+  background: rgba(79,142,247,0.06); border: 1px solid rgba(79,142,247,0.14);
+  border-radius: var(--r-sm); padding: 11px 14px;
+  font-size: 13px; color: var(--text2); line-height: 1.6;
+}
+.ae-tip strong { color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════
+   VIZ RECORDS LIST
+═══════════════════════════════════════════════════════ */
+.viz-record {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 14px 18px; margin-bottom: 8px;
+  cursor: pointer; transition: all 0.18s;
+}
+.viz-record:hover { border-color: var(--accent); background: rgba(79,142,247,0.04); }
+.vr-info { flex: 1; }
+.vr-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.vr-arr { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.vr-meta { font-size: 11px; color: var(--text3); text-align: right; margin-right: 8px; }
+.vr-arrow { color: var(--text3); transition: all 0.18s; font-size: 16px; }
+.viz-record:hover .vr-arrow { transform: translateX(4px); color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════
+   ARCHIVES
+═══════════════════════════════════════════════════════ */
+.archive-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px 22px; margin-bottom: 10px;
+  cursor: pointer; transition: all 0.2s;
+}
+.archive-card:hover { border-color: var(--border2); background: var(--surface2); }
+.ac-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.ac-meta { font-size: 11px; color: var(--text3); margin-left: auto; font-family: var(--mono); }
+.ac-steps { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+/* ═══════════════════════════════════════════════════════
+   C++ CODE VIEWER
+═══════════════════════════════════════════════════════ */
+.cpp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface3); border-radius: var(--r-sm) var(--r-sm) 0 0;
+  padding: 10px 16px; border: 1px solid var(--border); border-bottom: none;
+}
+.cpp-filename { font-family: var(--mono); font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+.cpp-lang-dot { width: 10px; height: 10px; border-radius: 50%; background: #00aeff; }
+pre.cpp-code {
+  background: #0a0e1a; border: 1px solid var(--border);
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  padding: 20px; overflow-x: auto; margin-bottom: 16px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.7;
+  color: var(--text2); white-space: pre;
+  max-height: 420px; overflow-y: auto;
+}
+/* Syntax-like coloring via spans */
+.kw  { color: #569cd6; }   /* keywords */
+.ty  { color: #4ec9b0; }   /* types */
+.fn  { color: #dcdcaa; }   /* functions */
+.cm  { color: #6a9955; }   /* comments */
+.st  { color: #ce9178; }   /* strings */
+.nu  { color: #b5cea8; }   /* numbers */
+.pp  { color: #c586c0; }   /* preprocessor */
+
+/* ═══════════════════════════════════════════════════════
+   MESSAGES
+═══════════════════════════════════════════════════════ */
+.msg { font-size: 13px; padding: 10px 14px; border-radius: var(--r-sm); margin-top: 12px; display: none; font-family: var(--mono); }
+.msg.success { display: block; background: rgba(0,229,176,0.08); border: 1px solid rgba(0,229,176,0.22); color: var(--accent2); }
+.msg.error   { display: block; background: rgba(255,95,126,0.08); border: 1px solid rgba(255,95,126,0.22); color: var(--accent3); }
+
+/* ═══════════════════════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════════════════════ */
+.empty-state { text-align: center; padding: 56px 0; color: var(--text3); }
+.empty-state .ei { font-size: 36px; opacity: 0.4; margin-bottom: 14px; }
+.empty-state p { font-size: 14px; }
+
+/* ═══════════════════════════════════════════════════════
+   MISC
+═══════════════════════════════════════════════════════ */
+hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.three-col { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+
+/* Sort result highlight row */
+.result-row {
+  display: flex; gap: 14px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.result-item {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 12px 14px;
+}
+.ri-label { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; margin-bottom: 6px; }
+.ri-val { font-family: var(--mono); font-size: 13px; color: var(--text); }
+
+/* Progress bar for steps */
+.progress-wrap { background: var(--surface2); border-radius: 4px; height: 4px; overflow: hidden; margin: 6px 0; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width 0.3s; }
+
+/* Tab switcher for C++ / Pseudocode */
+.tab-bar { display: flex; gap: 0; margin-bottom: 0; border-bottom: 1px solid var(--border); }
+.tab-btn {
+  padding: 8px 18px; background: none; border: none;
+  font-family: var(--mono); font-size: 12px; cursor: pointer;
+  color: var(--text3); border-bottom: 2px solid transparent; transition: all 0.2s;
+  margin-bottom: -1px;
+}
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-badge"><span class="dot"></span>CS — Data Structures &amp; Algorithms</div>
+    <div class="logo-name">GROUP <span class="highlight">UNO</span></div>
+    <div class="logo-sub">Sorting Algorithm Visualizer</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section-label">Navigation</div>
+    <button class="nav-item active" onclick="goto('home-page',this)">
+      <span class="ni-icon">⌂</span>
+      <span class="ni-label">Dashboard</span>
+    </button>
+    <button class="nav-item" onclick="goto('input-page',this)">
+      <span class="ni-icon">＋</span>
+      <span class="ni-label">Input Data</span>
+      <span class="ni-count" id="nc-inputs">0</span>
+    </button>
+    <button class="nav-item" onclick="goto('run-page',this)">
+      <span class="ni-icon">▶</span>
+      <span class="ni-label">Run Sort</span>
+    </button>
+    <button class="nav-item" onclick="goto('viz-page',this)">
+      <span class="ni-icon">◈</span>
+      <span class="ni-label">Visualizer</span>
+      <span class="ni-count" id="nc-sorts">0</span>
+    </button>
+    <button class="nav-item" onclick="goto('archives-page',this)">
+      <span class="ni-icon">⊞</span>
+      <span class="ni-label">Archives</span>
+    </button>
+    <div class="nav-section-label">Developer</div>
+    <button class="nav-item" onclick="goto('cpp-page',this)">
+      <span class="ni-icon">{ }</span>
+      <span class="ni-label">C++ Source</span>
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sf-row"><span class="sf-label">Datasets</span><span class="sf-val" id="sf-ds">0</span></div>
+    <div class="sf-row"><span class="sf-label">Sorts Run</span><span class="sf-val" id="sf-sorts">0</span></div>
+    <div class="sf-lang">
+      <div class="sf-lang-dot" style="background:#00aeff"></div>
+      <span>C++</span>
+      <div class="sf-lang-dot" style="background:#f7df1e;margin-left:8px"></div>
+      <span>JavaScript</span>
+      <div class="sf-lang-dot" style="background:#e34c26;margin-left:8px"></div>
+      <span>HTML</span>
+    </div>
+  </div>
+</aside>
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main class="main">
+  <div class="topbar">
+    <div class="tb-left">
+      <button class="menu-btn" onclick="toggleSidebar()" aria-label="Open navigation menu">☰</button>
+      <button class="menu-btn back-btn" onclick="goBackMobile()" aria-label="Back to dashboard">←</button>
+      <div class="tb-crumb">GROUP-UNO <span class="tb-sep">/</span> <span id="bc-text">Dashboard</span></div>
+    </div>
+    <div class="tb-right">
+      <div class="lang-tag">C++ · JS · HTML</div>
+      <div class="status-badge"><div class="status-dot"></div>System Ready</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ HOME PAGE ══ -->
+    <div id="home-page" class="page active">
+      <div class="sec-header">
+        <div class="sec-eyebrow">Dashboard</div>
+        <div class="sec-title">Sorting Algorithm <span class="hl">Visualizer</span></div>
+        <div class="sec-sub">An interactive system demonstrating data structures and sorting algorithm concepts — built with <strong>C++ backend logic</strong> and an <strong>HTML/JS frontend</strong>.</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-label">Datasets</div>
+          <div class="stat-value" id="st-ds">0</div>
+          <div class="stat-sub">saved arrays</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-label">Sorts Run</div>
+          <div class="stat-value" id="st-sorts">0</div>
+          <div class="stat-sub">completed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🧩</div>
+          <div class="stat-label">Algorithms</div>
+          <div class="stat-value" style="color:var(--accent2)">6</div>
+          <div class="stat-sub">available</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔧</div>
+          <div class="stat-label">Languages</div>
+          <div class="stat-value" style="color:var(--accent4)">3</div>
+          <div class="stat-sub">C++ · JS · HTML</div>
+        </div>
+      </div>
+
+      <div class="home-grid">
+        <div class="home-card" onclick="goto('input-page',document.querySelectorAll('.nav-item')[1])">
+          <div class="hc-arrow">↗</div>
+          <div class="hc-num">01</div>
+          <div class="hc-icon c1">📥</div>
+          <h3>Input Data</h3>
+          <p>Enter numeric arrays to save as datasets. Supports 2–20 elements per array.</p>
+        </div>
+        <div class="home-card" onclick="goto('run-page',document.querySelectorAll('.nav-item')[2])">
+          <div class="hc-arrow">↗</div>
+          <div class="hc-num">02</div>
+          <div class="hc-icon c2">▶</div>
+          <h3>Run Sort</h3>
+          <p>Select dataset, algorithm, and order. Execute sort and see instant results.</p>
+        </div>
+        <div class="home-card" onclick="goto('viz-page',document.querySelectorAll('.nav-item')[3])">
+          <div class="hc-arrow">↗</div>
+          <div class="hc-num">03</div>
+          <div class="hc-icon c3">◈</div>
+          <h3>Visualizer</h3>
+          <p>Step through every intermediate state with animated bar chart replay.</p>
+        </div>
+        <div class="home-card" onclick="goto('cpp-page',document.querySelectorAll('.nav-item')[5])">
+          <div class="hc-arrow">↗</div>
+          <div class="hc-num">04</div>
+          <div class="hc-icon c4">{ }</div>
+          <h3>C++ Source</h3>
+          <p>Browse the complete C++ backend implementation used by this system.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Available Algorithms</div>
+        </div>
+        <div class="algo-chips">
+          <div class="algo-chip"><div class="chip-dot" style="background:#4f8ef7"></div><span class="chip-name">Bubble Sort</span><span class="chip-complexity">O(n²)</span></div>
+          <div class="algo-chip"><div class="chip-dot" style="background:#00e5b0"></div><span class="chip-name">Selection Sort</span><span class="chip-complexity">O(n²)</span></div>
+          <div class="algo-chip"><div class="chip-dot" style="background:#ff5f7e"></div><span class="chip-name">Insertion Sort</span><span class="chip-complexity">O(n²)</span></div>
+          <div class="algo-chip"><div class="chip-dot" style="background:#ffd166"></div><span class="chip-name">Merge Sort</span><span class="chip-complexity">O(n log n)</span></div>
+          <div class="algo-chip"><div class="chip-dot" style="background:#a78bfa"></div><span class="chip-name">Quick Sort</span><span class="chip-complexity">O(n log n)</span></div>
+          <div class="algo-chip"><div class="chip-dot" style="background:#fb923c"></div><span class="chip-name">Heap Sort</span><span class="chip-complexity">O(n log n)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INPUT PAGE ══ -->
+    <div id="input-page" class="page">
+      <div class="sec-header">
+        <div class="sec-eyebrow">Input Data</div>
+        <div class="sec-title">Add New <span class="hl">Dataset</span></div>
+        <div class="sec-sub">Enter a space-separated list of integers to create a new array dataset.</div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header"><div class="card-title">New Dataset</div></div>
+          <label class="form-label">Array Size (2–20 elements)</label>
+          <input type="number" id="arr-size" class="form-input" min="2" max="20" value="6" placeholder="6"/>
+          <label class="form-label">Values (space-separated integers)</label>
+          <input type="text" id="arr-vals" class="form-input" placeholder="e.g.  42  17  85  3  61  29"/>
+          <label class="form-label">Or generate random array</label>
+          <button class="btn btn-sm" onclick="genRandom()" style="margin-bottom:18px;">🎲 Generate Random</button>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="saveInput()">＋ Save Dataset</button>
+            <button class="btn btn-sm" onclick="clearInput()">Clear</button>
+          </div>
+          <div id="input-msg" class="msg"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Saved Datasets</div>
+            <button class="btn btn-sm" onclick="clearAllInputs()" style="font-size:11px;">Clear All</button>
+          </div>
+          <div id="saved-inputs">
+            <div class="empty-state"><div class="ei">📭</div><p>No datasets saved yet.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ RUN SORT PAGE ══ -->
+    <div id="run-page" class="page">
+      <div class="sec-header">
+        <div class="sec-eyebrow">Run Sort</div>
+        <div class="sec-title">Execute <span class="hl">Algorithm</span></div>
+        <div class="sec-sub">Configure and run a sort. Results are saved to archives and visualizer automatically.</div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Configuration</div></div>
+          <label class="form-label">Select Dataset</label>
+          <select id="ds-select" class="form-input"></select>
+          <label class="form-label">Algorithm</label>
+          <select id="algo-select" class="form-input">
+            <option value="bubble">Bubble Sort</option>
+            <option value="selection">Selection Sort</option>
+            <option value="insertion">Insertion Sort</option>
+            <option value="merge">Merge Sort</option>
+            <option value="quick">Quick Sort</option>
+            <option value="heap">Heap Sort</option>
+          </select>
+          <label class="form-label">Sort Order</label>
+          <div class="order-toggle">
+            <button class="order-btn sel-asc" id="btn-asc" onclick="selOrder('asc')">↑ Ascending</button>
+            <button class="order-btn" id="btn-desc" onclick="selOrder('desc')">↓ Descending</button>
+          </div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="runSort()">▶ &nbsp;Execute Sort</button>
+          <div id="sort-msg" class="msg"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Result Output</div></div>
+          <div id="sort-result">
+            <div class="empty-state"><div class="ei">⚙</div><p>Configure and run a sort to see output here.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VISUALIZER PAGE ══ -->
+    <div id="viz-page" class="page">
+      <div class="sec-header">
+        <div class="sec-eyebrow">Visualizer</div>
+        <div class="sec-title">Step-through <span class="hl">Replay</span></div>
+        <div class="sec-sub">Select a completed sort to replay every intermediate state with animated bar charts.</div>
+      </div>
+      <div id="viz-list-wrap">
+        <div id="viz-list"></div>
+      </div>
+      <div id="viz-detail" style="display:none;">
+        <button class="btn btn-sm" onclick="backToVizList()" style="margin-bottom:20px;">← Back to list</button>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Replay Controls</div></div>
+            <div id="viz-info"></div>
+            <div id="viz-bars"></div>
+            <div class="progress-wrap"><div class="progress-fill" id="viz-progress" style="width:0%"></div></div>
+            <div class="step-nav">
+              <button class="btn btn-sm" id="viz-prev" onclick="vizStep(-1)">← Prev</button>
+              <div class="step-label" id="viz-step-lbl">Step 1 of 1</div>
+              <button class="btn btn-sm" id="viz-next" onclick="vizStep(1)">Next →</button>
+            </div>
+            <div id="viz-step-arr" class="step-arr"></div>
+            <div class="autoplay-bar">
+              <button class="btn btn-sm" id="viz-play-btn" onclick="toggleAutoplay()">▶ Auto-play</button>
+              <span class="speed-label">Speed:</span>
+              <input type="range" class="speed-slider" id="viz-speed" min="100" max="1500" value="600" step="100"/>
+            </div>
+          </div>
+          <div id="algo-explanation-wrap"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ARCHIVES PAGE ══ -->
+    <div id="archives-page" class="page">
+      <div class="sec-header">
+        <div class="sec-eyebrow">Archives</div>
+        <div class="sec-title">Completed <span class="hl">Sorts</span></div>
+        <div class="sec-sub">All previously executed sorts with metadata and results. Click any entry to view in the Visualizer.</div>
+      </div>
+      <div id="archives-list"></div>
+    </div>
+
+    <!-- ══ C++ SOURCE PAGE ══ -->
+    <div id="cpp-page" class="page">
+      <div class="sec-header">
+        <div class="sec-eyebrow">C++ Backend Source</div>
+        <div class="sec-title">Backend <span class="hl">Implementation</span></div>
+        <div class="sec-sub">The complete C++ source code powering the sorting logic of this system. This file can be compiled and run independently as a standalone CLI program.</div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('tab-main','this',this)">main.cpp</button>
+        <button class="tab-btn" onclick="switchTab('tab-sort','this',this)">sorting.h</button>
+        <button class="tab-btn" onclick="switchTab('tab-steps','this',this)">steps.h</button>
+      </div>
+      <div style="height:12px"></div>
+
+      <!-- main.cpp -->
+      <div id="tab-main" class="tab-content active">
+        <div class="cpp-header">
+          <div class="cpp-filename"><div class="cpp-lang-dot"></div>main.cpp</div>
+          <span class="badge badge-blue">Entry Point</span>
+        </div>
+        <pre class="cpp-code"><span class="cm">/*
+ * GROUP UNO — Sorting Algorithm Visualizer
+ * Backend: main.cpp
+ * Demonstrates data structures and algorithm concepts.
+ * Course Final Requirement — System Development (Algorithm)
+ */</span>
+
+<span class="pp">#include</span> <span class="st">&lt;iostream&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;string&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;limits&gt;</span>
+<span class="pp">#include</span> <span class="st">"sorting.h"</span>
+<span class="pp">#include</span> <span class="st">"steps.h"</span>
+
+<span class="kw">using namespace</span> std;
+
+<span class="cm">/* ── Display a vector array ─────────────────────────────── */</span>
+<span class="ty">void</span> <span class="fn">printArray</span>(<span class="kw">const</span> vector&lt;<span class="ty">int</span>&gt;&amp; arr, <span class="kw">const</span> string&amp; label) {
+    cout &lt;&lt; label &lt;&lt; <span class="st">" [ "</span>;
+    <span class="kw">for</span> (<span class="ty">size_t</span> i = <span class="nu">0</span>; i &lt; arr.size(); i++) {
+        cout &lt;&lt; arr[i];
+        <span class="kw">if</span> (i &lt; arr.size() - <span class="nu">1</span>) cout &lt;&lt; <span class="st">", "</span>;
+    }
+    cout &lt;&lt; <span class="st">" ]"</span> &lt;&lt; endl;
+}
+
+<span class="cm">/* ── Display sort steps ─────────────────────────────────── */</span>
+<span class="ty">void</span> <span class="fn">printSteps</span>(<span class="kw">const</span> vector&lt;vector&lt;<span class="ty">int</span>&gt;&gt;&amp; steps) {
+    cout &lt;&lt; <span class="st">"\n--- Sort Steps ---\n"</span>;
+    <span class="kw">for</span> (<span class="ty">size_t</span> i = <span class="nu">0</span>; i &lt; steps.size(); i++) {
+        cout &lt;&lt; <span class="st">"Step "</span> &lt;&lt; (i + <span class="nu">1</span>) &lt;&lt; <span class="st">": [ "</span>;
+        <span class="kw">for</span> (<span class="ty">size_t</span> j = <span class="nu">0</span>; j &lt; steps[i].size(); j++) {
+            cout &lt;&lt; steps[i][j];
+            <span class="kw">if</span> (j &lt; steps[i].size() - <span class="nu">1</span>) cout &lt;&lt; <span class="st">", "</span>;
+        }
+        cout &lt;&lt; <span class="st">" ]"</span> &lt;&lt; endl;
+    }
+}
+
+<span class="cm">/* ── Get user input array ───────────────────────────────── */</span>
+vector&lt;<span class="ty">int</span>&gt; <span class="fn">getUserArray</span>() {
+    <span class="ty">int</span> n;
+    cout &lt;&lt; <span class="st">"Enter number of elements (2-20): "</span>;
+    cin &gt;&gt; n;
+    <span class="kw">while</span> (n &lt; <span class="nu">2</span> || n &gt; <span class="nu">20</span>) {
+        cout &lt;&lt; <span class="st">"Invalid. Enter a value between 2 and 20: "</span>;
+        cin.clear();
+        cin.ignore(numeric_limits&lt;streamsize&gt;::max(), <span class="st">'\n'</span>);
+        cin &gt;&gt; n;
+    }
+    vector&lt;<span class="ty">int</span>&gt; arr(n);
+    cout &lt;&lt; <span class="st">"Enter "</span> &lt;&lt; n &lt;&lt; <span class="st">" integers: "</span>;
+    <span class="kw">for</span> (<span class="ty">int</span>&amp; val : arr) cin &gt;&gt; val;
+    <span class="kw">return</span> arr;
+}
+
+<span class="cm">/* ── Main menu ──────────────────────────────────────────── */</span>
+<span class="ty">int</span> <span class="fn">main</span>() {
+    cout &lt;&lt; <span class="st">"=================================\n"</span>;
+    cout &lt;&lt; <span class="st">" GROUP UNO — Sorting Visualizer\n"</span>;
+    cout &lt;&lt; <span class="st">"=================================\n\n"</span>;
+
+    vector&lt;<span class="ty">int</span>&gt; arr = <span class="fn">getUserArray</span>();
+    <span class="fn">printArray</span>(arr, <span class="st">"Original array:"</span>);
+
+    cout &lt;&lt; <span class="st">"\nSelect Algorithm:\n"</span>;
+    cout &lt;&lt; <span class="st">"  1. Bubble Sort\n"</span>;
+    cout &lt;&lt; <span class="st">"  2. Selection Sort\n"</span>;
+    cout &lt;&lt; <span class="st">"  3. Insertion Sort\n"</span>;
+    cout &lt;&lt; <span class="st">"  4. Merge Sort\n"</span>;
+    cout &lt;&lt; <span class="st">"  5. Quick Sort\n"</span>;
+    cout &lt;&lt; <span class="st">"  6. Heap Sort\n"</span>;
+    cout &lt;&lt; <span class="st">"Choice: "</span>;
+    <span class="ty">int</span> choice; cin &gt;&gt; choice;
+
+    cout &lt;&lt; <span class="st">"\nSort order (1=Ascending, 2=Descending): "</span>;
+    <span class="ty">int</span> orderChoice; cin &gt;&gt; orderChoice;
+    <span class="ty">bool</span> ascending = (orderChoice == <span class="nu">1</span>);
+
+    <span class="cm">/* Run the selected sort and capture steps */</span>
+    Sorter sorter;
+    StepRecorder recorder;
+    sorter.sort(arr, choice, ascending, recorder);
+
+    <span class="fn">printArray</span>(arr, <span class="st">"Sorted array: "</span>);
+    <span class="fn">printSteps</span>(recorder.getSteps());
+
+    cout &lt;&lt; <span class="st">"\nTotal steps: "</span> &lt;&lt; recorder.count() &lt;&lt; endl;
+    <span class="kw">return</span> <span class="nu">0</span>;
+}</pre>
+      </div>
+
+      <!-- sorting.h -->
+      <div id="tab-sort" class="tab-content">
+        <div class="cpp-header">
+          <div class="cpp-filename"><div class="cpp-lang-dot"></div>sorting.h</div>
+          <span class="badge badge-teal">Core Algorithms</span>
+        </div>
+        <pre class="cpp-code"><span class="cm">/*
+ * sorting.h — Core sorting algorithm implementations
+ * Each algorithm records intermediate states via StepRecorder.
+ */</span>
+
+<span class="pp">#pragma once</span>
+<span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;algorithm&gt;</span>
+<span class="pp">#include</span> <span class="st">"steps.h"</span>
+
+<span class="kw">class</span> <span class="ty">Sorter</span> {
+<span class="kw">public</span>:
+    <span class="cm">/* ── Dispatcher ───────────────────────────────────────── */</span>
+    <span class="ty">void</span> <span class="fn">sort</span>(vector&lt;<span class="ty">int</span>&gt;&amp; arr, <span class="ty">int</span> choice, <span class="ty">bool</span> asc, StepRecorder&amp; rec) {
+        <span class="kw">switch</span> (choice) {
+            <span class="kw">case</span> <span class="nu">1</span>: <span class="fn">bubbleSort</span>(arr, rec);    <span class="kw">break</span>;
+            <span class="kw">case</span> <span class="nu">2</span>: <span class="fn">selectionSort</span>(arr, rec); <span class="kw">break</span>;
+            <span class="kw">case</span> <span class="nu">3</span>: <span class="fn">insertionSort</span>(arr, rec); <span class="kw">break</span>;
+            <span class="kw">case</span> <span class="nu">4</span>: <span class="fn">mergeSort</span>(arr, <span class="nu">0</span>, arr.size()-<span class="nu">1</span>, rec); <span class="kw">break</span>;
+            <span class="kw">case</span> <span class="nu">5</span>: <span class="fn">quickSort</span>(arr, <span class="nu">0</span>, arr.size()-<span class="nu">1</span>, rec); <span class="kw">break</span>;
+            <span class="kw">case</span> <span class="nu">6</span>: <span class="fn">heapSort</span>(arr, rec);     <span class="kw">break</span>;
+        }
+        <span class="cm">/* Reverse all steps if descending order requested */</span>
+        <span class="kw">if</span> (!asc) {
+            reverse(arr.begin(), arr.end());
+            rec.reverseAll();
+        }
+    }
+
+<span class="kw">private</span>:
+    <span class="cm">/* ── 1. Bubble Sort ───────────────────────────────────── */</span>
+    <span class="ty">void</span> <span class="fn">bubbleSort</span>(vector&lt;<span class="ty">int</span>&gt;&amp; arr, StepRecorder&amp; rec) {
+        <span class="ty">int</span> n = arr.size();
+        <span class="kw">for</span> (<span class="ty">int</span> i = <span class="nu">0</span>; i &lt; n - <span class="nu">1</span>; i++) {
+            <span class="ty">bool</span> swapped = <span class="kw">false</span>;
+            <span class="kw">for</span> (<span class="ty">int</span> j = <span class="nu">0</span>; j &lt; n - i - <span class="nu">1</span>; j++) {
+                <span class="kw">if</span> (arr[j] &gt; arr[j + <span class="nu">1</span>]) {
+                    swap(arr[j], arr[j + <span class="nu">1</span>]);
+                    swapped = <span class="kw">true</span>;
+                }
+            }
+            rec.record(arr); <span class="cm">// record state after each pass</span>
+            <span class="kw">if</span> (!swapped) <span class="kw">break</span>; <span class="cm">// early exit optimization</span>
+        }
+    }
+
+    <span class="cm">/* ── 2. Selection Sort ────────────────────────────────── */</span>
+    <span class="ty">void</span> <span class="fn">selectionSort</span>(vector&lt;<span class="ty">int</span>&gt;&amp; arr, StepRecorder&amp; rec) {
+        <span class="ty">int</span> n = arr.size();
+        <span class="kw">for</span> (<span class="ty">int</span> i = <span class="nu">0</span>; i &lt; n - <span class="nu">1</span>; i++) {
+            <span class="ty">int</span> minIdx = i;
+            <span class="kw">for</span> (<span class="ty">int</span> j = i + <span class="nu">1</span>; j &lt; n; j++) {
+                <span class="kw">if</span> (arr[j] &lt; arr[minIdx]) minIdx = j;
+            }
+            <span class="kw">if</span> (minIdx != i) {
+                swap(arr[i], arr[minIdx]);
+                rec.record(arr); <span class="cm">// record after each swap</span>
+            }
+        }
+    }
+
+    <span class="cm">/* ── 3. Insertion Sort ────────────────────────────────── */</span>
+    <span class="ty">void</span> <span class="fn">insertionSort</span>(vector&lt;<span class="ty">int</span>&gt;&amp; arr, StepRecorder&amp; rec) {
+        <span class="ty">int</span> n = arr.size();
+        <span class="kw">for</span> (<span class="ty">int</span> i = <span class="nu">1</span>; i &lt; n; i++) {
+            <span class="ty">int</span> key = arr[i];
+            <span class="ty">int</span> j   = i - <span class="nu">1</span>;
+            <span class="kw">while</span> (j &gt;= <span class="nu">0</span> &amp;&amp; arr[j] &gt; key) {
+                arr[j + <span class="nu">1</span>] = arr[j];
+                j--;
+            }
+            arr[j + <span class="nu">1</span>] = key;
+            rec.record(arr); <span class="cm">// record after inserting each element</span>
+        }
+    }
+
+    <span class="cm">/* ── 4. Merge Sort ────────────────────────────────────── */</span>
+    <span class="ty">void</span> <span class="fn">merge</span>(vector&lt;<span class="ty">int</span>&gt;&amp; arr, <span class="ty">int</span> l, <span class="ty">int</span> m, <span class="ty">int</span> r, StepRecorder&amp; rec) {
+        vector&lt;<span class="ty">int</span>&gt; L(arr.begin() + l, arr.begin() + m + <span class="nu">1</span>);
+        vector&lt;<span class="ty">int</span>&gt; R(arr.begin() + m + <span class="nu">1</span>, arr.begin() + r + <span class="nu">1</span>);
+        <span class="ty">int</span> i = <span class="nu">0</span>, j = <span class="nu">0</span>, k = l;
+        <span class="kw">while</span> (i &lt; L.size() &amp;&amp; j &lt; R.size())
+            arr[k++] = (L[i] &lt;= R[j]) ? L[i++] : R[j++];
+        <span class="kw">while</span> (i &lt; L.size()) arr[k++] = L[i++];
+        <span class="kw">while</span> (j &lt; R.size()) arr[k++] = R[j++];
+        rec.record(arr);
+    }
+
+    <span class="ty">void</span> <span class="fn">mergeSort</span>(vector&lt;<span class="ty">int</span>&gt;&amp; arr, <span class="ty">int</span> l, <span class="ty">int</span> r, StepRecorder&amp; rec) {
+        <span class="kw">if</span> (l &gt;= r) <span class="kw">return</span>;
+        <span class="ty">int</span> m = (l + r) / <span class="nu">2</span>;
+        <span class="fn">mergeSort</span>(arr, l, m, rec);
+        <span class="fn">mergeSort</span>(arr, m + <span class="nu">1</span>, r, rec);
+        <span class="fn">merge</span>(arr, l, m, r, rec);
+    }
+
+    <span class="cm">/* ── 5. Quick Sort ────────────────────────────────────── */</span>
+    <span class="ty">int</span> <span class="fn">partition</span>(vector&lt;<span class="ty">int</span>&gt;&amp; arr, <span class="ty">int</span> lo, <span class="ty">int</span> hi, StepRecorder&amp; rec) {
+        <span class="ty">int</span> pivot = arr[hi], i = lo - <span class="nu">1</span>;
+        <span class="kw">for</span> (<span class="ty">int</span> j = lo; j &lt; hi; j++) {
+            <span class="kw">if</span> (arr[j] &lt; pivot) swap(arr[++i], arr[j]);
+        }
+        swap(arr[i + <span class="nu">1</span>], arr[hi]);
+        rec.record(arr);
+        <span class="kw">return</span> i + <span class="nu">1</span>;
+    }
+
+    <span class="ty">void</span> <span class="fn">quickSort</span>(vector&lt;<span class="ty">int</span>&gt;&amp; arr, <span class="ty">int</span> lo, <span class="ty">int</span> hi, StepRecorder&amp; rec) {
+        <span class="kw">if</span> (lo &lt; hi) {
+            <span class="ty">int</span> pi = <span class="fn">partition</span>(arr, lo, hi, rec);
+            <span class="fn">quickSort</span>(arr, lo, pi - <span class="nu">1</span>, rec);
+            <span class="fn">quickSort</span>(arr, pi + <span class="nu">1</span>, hi, rec);
+        }
+    }
+
+    <span class="cm">/* ── 6. Heap Sort ─────────────────────────────────────── */</span>
+    <span class="ty">void</span> <span class="fn">heapify</span>(vector&lt;<span class="ty">int</span>&gt;&amp; arr, <span class="ty">int</span> n, <span class="ty">int</span> i, StepRecorder&amp; rec) {
+        <span class="ty">int</span> largest = i, l = <span class="nu">2</span>*i+<span class="nu">1</span>, r = <span class="nu">2</span>*i+<span class="nu">2</span>;
+        <span class="kw">if</span> (l &lt; n &amp;&amp; arr[l] &gt; arr[largest]) largest = l;
+        <span class="kw">if</span> (r &lt; n &amp;&amp; arr[r] &gt; arr[largest]) largest = r;
+        <span class="kw">if</span> (largest != i) {
+            swap(arr[i], arr[largest]);
+            <span class="fn">heapify</span>(arr, n, largest, rec);
+        }
+    }
+
+    <span class="ty">void</span> <span class="fn">heapSort</span>(vector&lt;<span class="ty">int</span>&gt;&amp; arr, StepRecorder&amp; rec) {
+        <span class="ty">int</span> n = arr.size();
+        <span class="cm">/* Phase 1: Build max-heap */</span>
+        <span class="kw">for</span> (<span class="ty">int</span> i = n/<span class="nu">2</span>-<span class="nu">1</span>; i &gt;= <span class="nu">0</span>; i--) <span class="fn">heapify</span>(arr, n, i, rec);
+        rec.record(arr);
+        <span class="cm">/* Phase 2: Extract elements from heap */</span>
+        <span class="kw">for</span> (<span class="ty">int</span> i = n-<span class="nu">1</span>; i &gt; <span class="nu">0</span>; i--) {
+            swap(arr[<span class="nu">0</span>], arr[i]);
+            <span class="fn">heapify</span>(arr, i, <span class="nu">0</span>, rec);
+            rec.record(arr);
+        }
+    }
+};</pre>
+      </div>
+
+      <!-- steps.h -->
+      <div id="tab-steps" class="tab-content">
+        <div class="cpp-header">
+          <div class="cpp-filename"><div class="cpp-lang-dot"></div>steps.h</div>
+          <span class="badge badge-yellow">Step Recorder</span>
+        </div>
+        <pre class="cpp-code"><span class="cm">/*
+ * steps.h — StepRecorder class
+ * Captures every intermediate state of the array during sorting.
+ * Used to power the step-through visualizer in the frontend.
+ */</span>
+
+<span class="pp">#pragma once</span>
+<span class="pp">#include</span> <span class="st">&lt;vector&gt;</span>
+<span class="pp">#include</span> <span class="st">&lt;algorithm&gt;</span>
+
+<span class="kw">class</span> <span class="ty">StepRecorder</span> {
+<span class="kw">private</span>:
+    <span class="cm">/* Internal storage: each element is a snapshot of the array */</span>
+    vector&lt;vector&lt;<span class="ty">int</span>&gt;&gt; steps;
+
+<span class="kw">public</span>:
+    <span class="cm">/* Record current state of the array as a snapshot */</span>
+    <span class="ty">void</span> <span class="fn">record</span>(<span class="kw">const</span> vector&lt;<span class="ty">int</span>&gt;&amp; arr) {
+        steps.push_back(arr);
+    }
+
+    <span class="cm">/* Get all recorded steps (read-only) */</span>
+    <span class="kw">const</span> vector&lt;vector&lt;<span class="ty">int</span>&gt;&gt;&amp; <span class="fn">getSteps</span>() <span class="kw">const</span> {
+        <span class="kw">return</span> steps;
+    }
+
+    <span class="cm">/* Return total number of recorded steps */</span>
+    <span class="ty">size_t</span> <span class="fn">count</span>() <span class="kw">const</span> {
+        <span class="kw">return</span> steps.size();
+    }
+
+    <span class="cm">/* Reverse all steps (used for descending order) */</span>
+    <span class="ty">void</span> <span class="fn">reverseAll</span>() {
+        <span class="kw">for</span> (<span class="kw">auto</span>&amp; step : steps) {
+            reverse(step.begin(), step.end());
+        }
+    }
+
+    <span class="cm">/* Clear all recorded steps */</span>
+    <span class="ty">void</span> <span class="fn">clear</span>() {
+        steps.clear();
+    }
+};</pre>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <div class="card-header"><div class="card-title">How to Compile &amp; Run (C++)</div></div>
+        <div class="arr-box" style="color:var(--accent4)">
+g++ -std=c++17 -O2 -o sorting_visualizer main.cpp
+./sorting_visualizer
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin-top:10px;line-height:1.7;">
+          The C++ backend handles all sorting logic and step recording.
+          The HTML/JS frontend mirrors this logic and provides the interactive
+          visual layer. Both implementations are kept in sync — any algorithm
+          change in <code style="font-family:var(--mono);color:var(--accent);font-size:12px">sorting.h</code>
+          is reflected in the JavaScript counterpart.
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+</div><!-- /app -->
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   GROUP UNO — Sorting Algorithm Visualizer
+   JavaScript Frontend (mirrors C++ backend logic)
+   Demonstrates data structures and algorithm concepts.
+══════════════════════════════════════════════════════════════ */
+
+/* ── Application State ──────────────────────────────────────── */
+const state = {
+  datasets:   [],   // Array of number[] — user-created datasets
+  archives:   [],   // Completed sort records
+  sortOrder:  'asc',
+  vizIdx:     0,    // Current archive index in visualizer
+  vizStep:    0,    // Current step index in visualizer
+  autoplayTimer: null
+};
+
+/* ── Page / Nav routing ──────────────────────────────────────── */
+const BREADCRUMBS = {
+  'home-page':     'Dashboard',
+  'input-page':    'Input Data',
+  'run-page':      'Run Sort',
+  'viz-page':      'Visualizer',
+  'archives-page': 'Archives',
+  'cpp-page':      'C++ Source'
+};
+
+function goto(pageId, navEl) {
+  /* Deactivate all pages */
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+
+  /* Update breadcrumb */
+  document.getElementById('bc-text').textContent = BREADCRUMBS[pageId] || pageId;
+
+  /* Update nav items */
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+
+  /* Page-specific init */
+  if (pageId === 'home-page')     updateStats();
+  if (pageId === 'input-page')    renderDatasets();
+  if (pageId === 'run-page')      populateDatasetSelect();
+  if (pageId === 'viz-page')      renderVizList();
+  if (pageId === 'archives-page') renderArchives();
+
+  updateSidebar();
+  closeSidebar();
+  if (pageId === 'home-page') {
+    document.body.classList.remove('show-back');
+  } else {
+    document.body.classList.add('show-back');
+  }
+}
+
+function goBackMobile() {
+  goto('home-page', document.querySelector('.nav-item'));
+}
+
+function updateSidebar() {
+  document.getElementById('sf-ds').textContent    = state.datasets.length;
+  document.getElementById('sf-sorts').textContent = state.archives.length;
+  document.getElementById('nc-inputs').textContent = state.datasets.length;
+  document.getElementById('nc-sorts').textContent  = state.archives.length;
+}
+
+function toggleSidebar() {
+  document.body.classList.toggle('sidebar-open');
+}
+
+function closeSidebar() {
+  document.body.classList.remove('sidebar-open');
+}
+
+function updateStats() {
+  document.getElementById('st-ds').textContent    = state.datasets.length;
+  document.getElementById('st-sorts').textContent = state.archives.length;
+}
+
+/* ── Tab switching (C++ page) ────────────────────────────────── */
+function switchTab(tabId, _, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INPUT / DATASET MANAGEMENT
+══════════════════════════════════════════════════════════════ */
+
+/* Generate random array */
+function genRandom() {
+  const size = Math.floor(Math.random() * 9) + 4; // 4–12 elements
+  const vals = Array.from({length: size}, () => Math.floor(Math.random() * 98) + 1);
+  document.getElementById('arr-size').value = size;
+  document.getElementById('arr-vals').value = vals.join('  ');
+}
+
+/* Save input dataset */
+function saveInput() {
+  const raw  = document.getElementById('arr-vals').value.trim();
+  const vals = raw.split(/\s+/).map(Number).filter(v => !isNaN(v) && v === v);
+  const msg  = document.getElementById('input-msg');
+
+  if (vals.length < 2) {
+    showMsg('input-msg', 'error', 'Please enter at least 2 valid integers.');
+    return;
+  }
+  if (vals.length > 20) {
+    showMsg('input-msg', 'error', 'Maximum 20 elements allowed.');
+    return;
+  }
+
+  state.datasets.push(vals);
+  showMsg('input-msg', 'success', `Dataset #${state.datasets.length} saved — ${vals.length} elements.`);
+  document.getElementById('arr-vals').value = '';
+  renderDatasets();
+  updateSidebar();
+}
+
+/* Clear input fields */
+function clearInput() {
+  document.getElementById('arr-vals').value = '';
+  document.getElementById('arr-size').value = 6;
+  const m = document.getElementById('input-msg');
+  m.className = 'msg'; m.textContent = '';
+}
+
+/* Clear all saved datasets */
+function clearAllInputs() {
+  if (!state.datasets.length) return;
+  if (!confirm('Delete all datasets?')) return;
+  state.datasets = [];
+  renderDatasets();
+  updateSidebar();
+}
+
+/* Delete single dataset by index */
+function deleteDataset(idx) {
+  state.datasets.splice(idx, 1);
+  renderDatasets();
+  updateSidebar();
+}
+
+/* Render saved datasets list */
+function renderDatasets() {
+  const el = document.getElementById('saved-inputs');
+  if (!state.datasets.length) {
+    el.innerHTML = '<div class="empty-state"><div class="ei">📭</div><p>No datasets saved yet.</p></div>';
+    return;
+  }
+  el.innerHTML = state.datasets.map((arr, i) => `
+    <div class="ds-item">
+      <span class="ds-num">#${i+1}</span>
+      <span class="ds-vals">${arr.join('  ')}</span>
+      <span class="ds-len">${arr.length} items</span>
+      <button class="ds-del" onclick="deleteDataset(${i})" title="Delete">✕</button>
+    </div>`).join('');
+}
+
+/* Populate dataset select dropdown */
+function populateDatasetSelect() {
+  const sel = document.getElementById('ds-select');
+  if (!state.datasets.length) {
+    sel.innerHTML = '<option>— No datasets available —</option>';
+    return;
+  }
+  sel.innerHTML = state.datasets.map((arr, i) =>
+    `<option value="${i}">#${i+1}: [ ${arr.join('  ')} ]</option>`
+  ).join('');
+}
+
+/* Select ascending/descending order */
+function selOrder(order) {
+  state.sortOrder = order;
+  document.getElementById('btn-asc').className  = 'order-btn' + (order === 'asc'  ? ' sel-asc'  : '');
+  document.getElementById('btn-desc').className = 'order-btn' + (order === 'desc' ? ' sel-desc' : '');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SORTING ALGORITHMS (JavaScript mirrors C++ backend)
+   Each function sorts arr in-place and returns array of steps.
+══════════════════════════════════════════════════════════════ */
+
+/* Helper: clone array snapshot */
+const snap = arr => [...arr];
+
+/* ── 1. Bubble Sort */
+function bubbleSort(arr) {
+  const steps = [snap(arr)];
+  const n = arr.length;
+  for (let i = 0; i < n - 1; i++) {
+    let swapped = false;
+    for (let j = 0; j < n - i - 1; j++) {
+      if (arr[j] > arr[j + 1]) {
+        [arr[j], arr[j+1]] = [arr[j+1], arr[j]];
+        swapped = true;
+      }
+    }
+    steps.push(snap(arr));
+    if (!swapped) break; // early exit optimization
+  }
+  return steps;
+}
+
+/* ── 2. Selection Sort */
+function selectionSort(arr) {
+  const steps = [snap(arr)];
+  const n = arr.length;
+  for (let i = 0; i < n - 1; i++) {
+    let minIdx = i;
+    for (let j = i + 1; j < n; j++) {
+      if (arr[j] < arr[minIdx]) minIdx = j;
+    }
+    if (minIdx !== i) {
+      [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+      steps.push(snap(arr));
+    }
+  }
+  return steps;
+}
+
+/* ── 3. Insertion Sort */
+function insertionSort(arr) {
+  const steps = [snap(arr)];
+  for (let i = 1; i < arr.length; i++) {
+    const key = arr[i];
+    let j = i - 1;
+    while (j >= 0 && arr[j] > key) { arr[j+1] = arr[j]; j--; }
+    arr[j+1] = key;
+    steps.push(snap(arr));
+  }
+  return steps;
+}
+
+/* ── 4. Merge Sort */
+function mergeSort(arr) {
+  const steps = [snap(arr)];
+  function merge(a, l, m, r) {
+    const L = a.slice(l, m+1), R = a.slice(m+1, r+1);
+    let i=0, j=0, k=l;
+    while (i<L.length && j<R.length) a[k++] = L[i]<=R[j] ? L[i++] : R[j++];
+    while (i<L.length) a[k++] = L[i++];
+    while (j<R.length) a[k++] = R[j++];
+    steps.push(snap(a));
+  }
+  function ms(a, l, r) {
+    if (l >= r) return;
+    const m = Math.floor((l+r)/2);
+    ms(a, l, m); ms(a, m+1, r);
+    merge(a, l, m, r);
+  }
+  ms(arr, 0, arr.length-1);
+  return steps;
+}
+
+/* ── 5. Quick Sort */
+function quickSort(arr) {
+  const steps = [snap(arr)];
+  function partition(a, lo, hi) {
+    const pivot = a[hi]; let i = lo - 1;
+    for (let j = lo; j < hi; j++)
+      if (a[j] < pivot) [a[++i], a[j]] = [a[j], a[i]];
+    [a[i+1], a[hi]] = [a[hi], a[i+1]];
+    steps.push(snap(a));
+    return i + 1;
+  }
+  function qs(a, lo, hi) {
+    if (lo < hi) { const pi = partition(a, lo, hi); qs(a, lo, pi-1); qs(a, pi+1, hi); }
+  }
+  qs(arr, 0, arr.length-1);
+  return steps;
+}
+
+/* ── 6. Heap Sort */
+function heapSort(arr) {
+  const steps = [snap(arr)];
+  function heapify(a, n, i) {
+    let lg = i, l = 2*i+1, r = 2*i+2;
+    if (l < n && a[l] > a[lg]) lg = l;
+    if (r < n && a[r] > a[lg]) lg = r;
+    if (lg !== i) { [a[i], a[lg]] = [a[lg], a[i]]; heapify(a, n, lg); }
+  }
+  const n = arr.length;
+  // Phase 1: build max-heap
+  for (let i = Math.floor(n/2)-1; i >= 0; i--) heapify(arr, n, i);
+  steps.push(snap(arr));
+  // Phase 2: extract elements
+  for (let i = n-1; i > 0; i--) {
+    [arr[0], arr[i]] = [arr[i], arr[0]];
+    heapify(arr, i, 0);
+    steps.push(snap(arr));
+  }
+  return steps;
+}
+
+/* ── Algorithm dispatcher ── */
+const ALGO_NAMES = {
+  bubble:'Bubble Sort', selection:'Selection Sort', insertion:'Insertion Sort',
+  merge:'Merge Sort', quick:'Quick Sort', heap:'Heap Sort'
+};
+const ALGO_FNS = { bubble:bubbleSort, selection:selectionSort, insertion:insertionSort,
+                   merge:mergeSort, quick:quickSort, heap:heapSort };
+
+/* ══════════════════════════════════════════════════════════════
+   RUN SORT
+══════════════════════════════════════════════════════════════ */
+function runSort() {
+  if (!state.datasets.length) {
+    showMsg('sort-msg', 'error', 'No datasets found. Go to Input Data first.');
+    return;
+  }
+
+  const dsIdx  = parseInt(document.getElementById('ds-select').value);
+  const algo   = document.getElementById('algo-select').value;
+  const order  = state.sortOrder;
+
+  // Deep-copy dataset so original is preserved
+  const arr    = [...state.datasets[dsIdx]];
+  const original = [...arr];
+
+  // Run the sorting algorithm — returns array of steps
+  const steps  = ALGO_FNS[algo](arr);
+
+  // If descending: reverse sorted array and all steps
+  if (order === 'desc') {
+    arr.reverse();
+    steps.forEach(s => s.reverse());
+  }
+
+  // Build archive record
+  const record = {
+    original,
+    sorted:   [...arr],
+    algo:     ALGO_NAMES[algo],
+    algoKey:  algo,
+    order,
+    time:     new Date().toLocaleString(),
+    steps,
+    comparisons: steps.length,
+    dsLabel:  `#${dsIdx+1}`
+  };
+  state.archives.push(record);
+  updateSidebar();
+
+  // Render result in UI
+  const orderBadge = order === 'asc'
+    ? '<span class="badge badge-asc">↑ Ascending</span>'
+    : '<span class="badge badge-desc">↓ Descending</span>';
+
+  document.getElementById('sort-result').innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+      <span class="badge badge-blue">${ALGO_NAMES[algo]}</span>
+      ${orderBadge}
+      <span style="font-size:11px;color:var(--text3);margin-left:auto;font-family:var(--mono)">${record.time}</span>
+    </div>
+    <div class="result-row">
+      <div class="result-item"><div class="ri-label">Steps Recorded</div><div class="ri-val">${steps.length}</div></div>
+      <div class="result-item"><div class="ri-label">Array Size</div><div class="ri-val">${original.length}</div></div>
+      <div class="result-item"><div class="ri-label">Order</div><div class="ri-val">${order === 'asc' ? 'Ascending ↑' : 'Descending ↓'}</div></div>
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;">Original Array</div>
+    <div class="arr-box" style="color:var(--text2)">${original.join('  ')}</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin:10px 0 5px;">Sorted Result</div>
+    <div class="arr-box">${arr.join('  ')}</div>
+    <div style="margin-top:14px;">
+      <a href="#" onclick="openVizFromSort(${state.archives.length-1}); return false;"
+        style="color:var(--accent);font-size:13px;font-family:var(--mono);text-decoration:none;">
+        ◈ View in Visualizer →
+      </a>
+    </div>`;
+
+  showMsg('sort-msg', 'success', `Sort completed. ${steps.length} step(s) recorded. Saved to archives.`);
+}
+
+function openVizFromSort(i) {
+  goto('viz-page', document.querySelectorAll('.nav-item')[3]);
+  setTimeout(() => openViz(i), 80);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   VISUALIZER
+══════════════════════════════════════════════════════════════ */
+function renderVizList() {
+  stopAutoplay();
+  document.getElementById('viz-detail').style.display = 'none';
+  document.getElementById('viz-list-wrap').style.display = 'block';
+
+  const el = document.getElementById('viz-list');
+  if (!state.archives.length) {
+    el.innerHTML = '<div class="empty-state"><div class="ei">◈</div><p>No sorts run yet. Go to Run Sort first.</p></div>';
+    return;
+  }
+  el.innerHTML = state.archives.map((a, i) => {
+    const ob = a.order === 'asc'
+      ? '<span class="badge badge-asc" style="font-size:9px;">↑ Asc</span>'
+      : '<span class="badge badge-desc" style="font-size:9px;">↓ Desc</span>';
+    return `
+      <div class="viz-record" onclick="openViz(${i})">
+        <div class="vr-info">
+          <div class="vr-name">
+            <span class="badge badge-blue" style="font-size:9px;">${a.algo}</span>
+            ${ob}
+          </div>
+          <div class="vr-arr">[ ${a.sorted.join('  ')} ]</div>
+        </div>
+        <div class="vr-meta">${a.steps.length} steps · ${a.time}</div>
+        <div class="vr-arrow">→</div>
+      </div>`;
+  }).join('');
+}
+
+function backToVizList() {
+  stopAutoplay();
+  renderVizList();
+}
+
+function openViz(i) {
+  state.vizIdx  = i;
+  state.vizStep = 0;
+  const a = state.archives[i];
+
+  document.getElementById('viz-list-wrap').style.display = 'none';
+  document.getElementById('viz-detail').style.display    = 'block';
+
+  const ob = a.order === 'asc'
+    ? '<span class="badge badge-asc">↑ Ascending</span>'
+    : '<span class="badge badge-desc">↓ Descending</span>';
+
+  document.getElementById('viz-info').innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+      <span class="badge badge-blue">${a.algo}</span> ${ob}
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Original</div>
+    <div class="arr-box" style="color:var(--text2);margin-bottom:10px">${a.original.join('  ')}</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Final Sorted</div>
+    <div class="arr-box">${a.sorted.join('  ')}</div>`;
+
+  document.getElementById('algo-explanation-wrap').innerHTML = buildAlgoExplanation(a.algo);
+  renderVizStep();
+}
+
+function renderVizStep() {
+  const a    = state.archives[state.vizIdx];
+  const step = a.steps[state.vizStep];
+  const max  = Math.max(...a.original, 1);
+
+  // Render bar chart
+  document.getElementById('viz-bars').innerHTML = step.map(v => {
+    const h = Math.round((v / max) * 130) + 10;
+    return `<div class="bar" style="height:${h}px" title="${v}"></div>`;
+  }).join('');
+
+  document.getElementById('viz-step-arr').textContent = `[ ${step.join('  ')} ]`;
+  document.getElementById('viz-step-lbl').textContent = `Step ${state.vizStep+1} of ${a.steps.length}`;
+  document.getElementById('viz-prev').disabled = state.vizStep === 0;
+  document.getElementById('viz-next').disabled = state.vizStep === a.steps.length - 1;
+
+  // Progress bar
+  const pct = ((state.vizStep) / (a.steps.length - 1) * 100) || 0;
+  document.getElementById('viz-progress').style.width = pct + '%';
+}
+
+function vizStep(dir) {
+  const a = state.archives[state.vizIdx];
+  state.vizStep = Math.max(0, Math.min(a.steps.length - 1, state.vizStep + dir));
+  renderVizStep();
+}
+
+/* Auto-play */
+function toggleAutoplay() {
+  if (state.autoplayTimer) {
+    stopAutoplay();
+  } else {
+    document.getElementById('viz-play-btn').textContent = '⏸ Pause';
+    const spd = () => 1600 - parseInt(document.getElementById('viz-speed').value);
+    function step() {
+      const a = state.archives[state.vizIdx];
+      if (state.vizStep >= a.steps.length - 1) { stopAutoplay(); return; }
+      state.vizStep++;
+      renderVizStep();
+      state.autoplayTimer = setTimeout(step, spd());
+    }
+    state.autoplayTimer = setTimeout(step, spd());
+  }
+}
+function stopAutoplay() {
+  if (state.autoplayTimer) { clearTimeout(state.autoplayTimer); state.autoplayTimer = null; }
+  const btn = document.getElementById('viz-play-btn');
+  if (btn) btn.textContent = '▶ Auto-play';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ARCHIVES
+══════════════════════════════════════════════════════════════ */
+function renderArchives() {
+  const el = document.getElementById('archives-list');
+  if (!state.archives.length) {
+    el.innerHTML = '<div class="empty-state"><div class="ei">⊞</div><p>No archives yet. Run a sort to populate this page.</p></div>';
+    return;
+  }
+  el.innerHTML = state.archives.map((a, i) => {
+    const ob = a.order === 'asc'
+      ? '<span class="badge badge-asc">↑ Ascending</span>'
+      : '<span class="badge badge-desc">↓ Descending</span>';
+    return `
+      <div class="archive-card" onclick="openVizFromSort(${i})">
+        <div class="ac-header">
+          <span class="badge badge-blue">${a.algo}</span>
+          ${ob}
+          <span class="badge badge-teal" style="font-size:9px;">Dataset ${a.dsLabel}</span>
+          <span class="ac-meta">${a.time}</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em;">Sorted Result</div>
+        <div class="arr-box">${a.sorted.join('  ')}</div>
+        <div class="ac-steps" style="margin-top:8px">${a.steps.length} step(s) recorded — click to visualize →</div>
+      </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ALGORITHM EXPLANATIONS
+══════════════════════════════════════════════════════════════ */
+const ALGO_INFO = {
+  'Bubble Sort': {
+    overview: 'Repeatedly compares adjacent elements and swaps them if out of order. The largest unsorted value "bubbles up" to its correct position each pass.',
+    howItWorks: 'For each pass over n elements, compare every consecutive pair and swap if needed. After each pass, the next-largest value is placed correctly, shrinking the active range. An early-exit flag stops the loop if no swaps occurred — meaning the array is already sorted.',
+    tip: 'Best for small or nearly-sorted arrays. Despite its simplicity, its O(n²) average makes it impractical for large inputs.',
+    complexity: [
+      {label:'Best',val:'O(n)'}, {label:'Avg',val:'O(n²)'},
+      {label:'Worst',val:'O(n²)'}, {label:'Space',val:'O(1)'}, {label:'Stable',val:'Yes'}
+    ]
+  },
+  'Selection Sort': {
+    overview: 'Divides the array into a sorted and unsorted region. On each pass, finds the minimum element in the unsorted region and moves it to the end of the sorted region.',
+    howItWorks: 'Scan from position i to n−1 for the minimum value. Swap it into position i. Repeat with i+1, i+2, …, n−2. Only one swap per pass — fewer writes than Bubble Sort.',
+    tip: 'Performs the minimum number of swaps (at most n−1). Useful when write operations are expensive, such as flash memory.',
+    complexity: [
+      {label:'Best',val:'O(n²)'}, {label:'Avg',val:'O(n²)'},
+      {label:'Worst',val:'O(n²)'}, {label:'Space',val:'O(1)'}, {label:'Stable',val:'No'}
+    ]
+  },
+  'Insertion Sort': {
+    overview: 'Builds a sorted sub-array one element at a time, inserting each new element into its correct position — like sorting a hand of playing cards.',
+    howItWorks: 'Start with element at index 1. Save it as key. Shift all larger elements one position right, then insert key at the correct position. Repeat for each element.',
+    tip: 'Excellent on small or nearly-sorted data. Adaptive — O(n) on already sorted input. Used as the base case in Timsort (Python, Java).',
+    complexity: [
+      {label:'Best',val:'O(n)'}, {label:'Avg',val:'O(n²)'},
+      {label:'Worst',val:'O(n²)'}, {label:'Space',val:'O(1)'}, {label:'Stable',val:'Yes'}
+    ]
+  },
+  'Merge Sort': {
+    overview: 'A divide-and-conquer algorithm: recursively split the array in half until single elements remain, then merge sorted halves back together in order.',
+    howItWorks: 'Halve the array recursively until each sub-array is length 1. The merge step compares front elements of two sorted halves and places the smaller first, rebuilding a sorted array.',
+    tip: 'Guaranteed O(n log n) in all cases. Stable — preferred when sort stability matters. Trade-off is O(n) extra memory for temporary arrays.',
+    complexity: [
+      {label:'Best',val:'O(n log n)'}, {label:'Avg',val:'O(n log n)'},
+      {label:'Worst',val:'O(n log n)'}, {label:'Space',val:'O(n)'}, {label:'Stable',val:'Yes'}
+    ]
+  },
+  'Quick Sort': {
+    overview: 'Picks a pivot and partitions the array so all smaller elements come before it and all larger after, then recursively sorts both partitions.',
+    howItWorks: 'Choose last element as pivot. Use two pointers to partition: move all values < pivot left, > pivot right. Pivot is now in its final position. Recursively sort both sides.',
+    tip: 'Fastest in practice on average due to excellent cache locality. Worst case O(n²) can be avoided with random or median-of-three pivot selection.',
+    complexity: [
+      {label:'Best',val:'O(n log n)'}, {label:'Avg',val:'O(n log n)'},
+      {label:'Worst',val:'O(n²)'}, {label:'Space',val:'O(log n)'}, {label:'Stable',val:'No'}
+    ]
+  },
+  'Heap Sort': {
+    overview: 'First builds a max-heap from the array, then repeatedly extracts the maximum element and places it at the end, rebuilding the heap each time.',
+    howItWorks: 'Phase 1: heapify from midpoint to root to build max-heap. Phase 2: Swap root (max) with last element, shrink heap size, re-heapify root. Repeat until one element remains.',
+    tip: 'Guaranteed O(n log n) with O(1) space — the best of both worlds. In practice, poor cache behavior makes it slower than Quick Sort on real hardware.',
+    complexity: [
+      {label:'Best',val:'O(n log n)'}, {label:'Avg',val:'O(n log n)'},
+      {label:'Worst',val:'O(n log n)'}, {label:'Space',val:'O(1)'}, {label:'Stable',val:'No'}
+    ]
+  }
+};
+
+function buildAlgoExplanation(algoName) {
+  const info = ALGO_INFO[algoName];
+  if (!info) return '';
+  const cells = info.complexity.map(c => `
+    <div class="cplx-cell">
+      <div class="cplx-label">${c.label}</div>
+      <div class="cplx-val">${c.val}</div>
+    </div>`).join('');
+  return `
+    <div class="algo-explanation">
+      <div class="ae-title">${algoName} <span class="badge badge-blue" style="font-size:9px;">Explanation</span></div>
+      <div class="ae-sub">Time &amp; Space Complexity Analysis</div>
+      <div class="ae-section">
+        <div class="ae-section-label">Overview</div>
+        <p>${info.overview}</p>
+      </div>
+      <div class="ae-section">
+        <div class="ae-section-label">How It Works</div>
+        <p>${info.howItWorks}</p>
+      </div>
+      <div class="complexity-grid">${cells}</div>
+      <div class="ae-tip"><strong>Pro Tip:</strong> ${info.tip}</div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UTILITY HELPERS
+══════════════════════════════════════════════════════════════ */
+function showMsg(id, type, text) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = `msg ${type}`;
+  if (type === 'success') setTimeout(() => { el.className = 'msg'; }, 4000);
+}
+
+/* ── Init ── */
+updateSidebar();
+</script>
+</body>
+</html>
